@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use Getopt::Std;
+
+my $GREP = "/usr/bin/grep";
+
+my $REGEX_UNSYMB = '^\d+\s+(\S+)\s+(0x[0-9a-f]+)\s+(0x[0-9a-f]+)\s+\+\s+(\d+)$';
+
+my %opt;
+
+$Getopt::Std::STANDARD_HELP_VERSION = 1;
+
+getopts( 'hvo:', \%opt );
+
+usage() if $opt{ 'h' };
+
+my ( $source ) = @ARGV;
+
+usage() if !defined( $source );
+
+print STDERR "\nSymbolicating...\n" if ( $opt{ v } );
+
+my @lines = get_unsymbolicated_lines( $source );
+
+print STDOUT "\n";
+
+exit 0;
+
+sub usage {
+print STDERR <<EOF;
+
+Usage:
+
+    $0 [-h] [-o <OUTPUT_FILE>] LOGFILE [SYMBOL_PATH ...]
+
+    Symbolicates a crashdump LOGFILE which may be "-" to refer to stdin.
+    By default, all heuristics will be employed in an attempt
+    to symbolicate all addresses.
+    Additional symbol files can be found under specified directories.
+
+Options:
+
+    -o  If specified, the symbolicated log will be written to OUTPUT_FILE
+        (defaults to stdout)
+    -h  Display this message
+    -v  Verbose
+
+EOF
+exit 1;
+}
+
+sub get_unsymbolicated_lines {
+    my ( $source ) = @_;
+    my @lines = split(/\n/, qx/$GREP -E '$REGEX_UNSYMB' $source/);
+    if ( $opt{ v } ) {
+        print STDERR "\nFound unsymbolicated lines:\n\n";
+        for my $line ( @lines ) {
+            print STDOUT "$line\n";
+        }
+    }
+    return @lines
+}
